@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../providers/barang_provider.dart';
 import 'add_edit_screen.dart';
-import 'package:intl/intl.dart';
 import '../models/barang_model.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -14,11 +13,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Semua fungsi helper (seperti _getIconForCategory) dan state management tetap sama.
-  // ... (semua fungsi initState, dispose, dan _onSearchChanged dari kode sebelumnya tetap di sini)
-    @override
+  @override
   void initState() {
     super.initState();
+    // Memuat data saat halaman pertama kali dibuka
     Provider.of<BarangProvider>(context, listen: false).fetchBarang();
   }
 
@@ -33,16 +31,27 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // AppBar sekarang menggunakan tema dari main.dart
       appBar: AppBar(
-        title: const Text('Gudang Pro'),
+        // --- INI BAGIAN KODE UNTUK LOGO & JUDUL ---
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/images/logo.png',
+              height: 32,
+            ),
+            const SizedBox(width: 12),
+            const Text('Gudang Pro'),
+          ],
+        ),
+        // -----------------------------------------
         actions: [
           IconButton(
             icon: const Icon(Icons.file_download_outlined),
             tooltip: 'Export ke CSV',
             onPressed: () async {
-              // Fungsi export tidak berubah
-              final provider = Provider.of<BarangProvider>(context, listen: false);
+              final provider =
+                  Provider.of<BarangProvider>(context, listen: false);
               final result = await provider.exportToCsv();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -55,29 +64,23 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
-          // Widget Pencarian
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
               onChanged: (value) {
-                // Fungsi pencarian tidak berubah
-                 Future.delayed(const Duration(milliseconds: 500), () {
-                    if (mounted) {
-                      Provider.of<BarangProvider>(context, listen: false)
-                          .fetchBarang(search: value);
-                    }
-                  });
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (mounted) {
+                    Provider.of<BarangProvider>(context, listen: false)
+                        .fetchBarang(search: value);
+                  }
+                });
               },
               decoration: InputDecoration(
                 hintText: 'Cari nama atau kategori barang...',
                 prefixIcon: Icon(Icons.search, color: Colors.grey.shade600),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 15),
               ),
             ),
           ),
-          // Daftar Barang
           Expanded(
             child: Consumer<BarangProvider>(
               builder: (context, provider, child) {
@@ -97,7 +100,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     itemCount: provider.items.length,
                     itemBuilder: (context, index) {
                       final item = provider.items[index];
-                      // Panggil widget desain baru
                       return _buildBarangListItem(item, provider);
                     },
                   ),
@@ -120,7 +122,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- WIDGET DESAIN BARU UNTUK LIST ITEM ---
   Widget _buildBarangListItem(Barang item, BarangProvider provider) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -167,7 +168,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Text(
                     item.namaBarang,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Colors.black87),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -186,10 +190,10 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   item.jumlahStok.toString(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w900,
                     fontSize: 22,
-                    color: Color(0xFF00897B), // Warna utama
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 Text(
@@ -205,7 +209,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildShimmerLoading() {
-    // Efek shimmer disesuaikan dengan layout baru
     return Shimmer.fromColors(
       baseColor: Colors.grey[200]!,
       highlightColor: Colors.grey[50]!,
@@ -220,13 +223,19 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           child: Row(
             children: [
-              Container(width: 54, height: 54, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12))),
+              Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12))),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(width: double.infinity, height: 16.0, color: Colors.white),
+                    Container(
+                        width: double.infinity, height: 16.0, color: Colors.white),
                     const SizedBox(height: 8),
                     Container(width: 100.0, height: 12.0, color: Colors.white),
                   ],
@@ -238,17 +247,21 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-  
+
   Widget _buildEmptyState() {
-      return Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inventory_2_outlined, size: 80, color: Colors.grey.shade400),
+          Icon(Icons.inventory_2_outlined,
+              size: 80, color: Colors.grey.shade400),
           const SizedBox(height: 20),
           Text(
             'Inventaris Anda Kosong',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+            style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600),
           ),
           const SizedBox(height: 10),
           Text(
