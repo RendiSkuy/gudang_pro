@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/barang_provider.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_screen.dart'; // <-- Pastikan mengimpor main_screen.dart
+import 'screens/splash_screen.dart'; 
 
 void main() {
   runApp(const MyApp());
@@ -12,9 +13,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Palet Warna Baru
-    const Color primaryColor = Color(0xFF00897B); // Teal yang lebih gelap
-    const Color lightGrey = Color(0xFFF5F5F5); // Abu-abu sangat terang
+    // Palet warna dan tema tetap sama
+    const Color primaryColor = Color(0xFF00897B);
+    const Color lightGrey = Color(0xFFF5F5F5);
 
     return ChangeNotifierProvider(
       create: (context) => BarangProvider(),
@@ -22,18 +23,13 @@ class MyApp extends StatelessWidget {
         title: 'Gudang Pro',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          // Skema Warna
           colorScheme: ColorScheme.fromSeed(
             seedColor: primaryColor,
             primary: primaryColor,
             background: lightGrey,
           ),
           useMaterial3: true,
-
-          // Tema Latar Belakang
           scaffoldBackgroundColor: lightGrey,
-
-          // Tema AppBar
           appBarTheme: const AppBarTheme(
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,
@@ -44,14 +40,10 @@ class MyApp extends StatelessWidget {
               color: Colors.white,
             ),
           ),
-
-          // Tema Floating Action Button
           floatingActionButtonTheme: const FloatingActionButtonThemeData(
             backgroundColor: primaryColor,
             foregroundColor: Colors.white,
           ),
-
-          // Tema Tombol
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
               backgroundColor: primaryColor,
@@ -66,8 +58,6 @@ class MyApp extends StatelessWidget {
               ),
             ),
           ),
-
-          // Tema Input Form
           inputDecorationTheme: InputDecorationTheme(
             filled: true,
             fillColor: Colors.white,
@@ -78,7 +68,8 @@ class MyApp extends StatelessWidget {
             floatingLabelStyle: const TextStyle(color: primaryColor),
           ),
         ),
-        home: const HomeScreen(),
+        // Perubahan utama ada di sini
+        home: const SplashScreen(),
       ),
     );
   }

@@ -7,7 +7,7 @@ class ApiService {
   // Untuk menjalankan di Web Browser: "http://localhost:8080/api/"
   // Untuk menjalankan di Emulator Android: "http://10.0.2.2:8080/api/"
   // Untuk menjalankan di HP Fisik: "http://<IP_LAPTOP_ANDA>:8080/api/"
-  final String _baseUrl = "http://localhost:8080/api/";
+  final String _baseUrl = "https://api.ovak.my.id/api/";
 
   Future<List<Barang>> getBarang({String? kategori, String? search}) async {
     var url = Uri.parse('${_baseUrl}barang');
@@ -44,19 +44,17 @@ class ApiService {
     return response.statusCode == 201;
   }
 
-  Future<bool> updateBarang(int id, Map<String, dynamic> data) async {
-    final response = await http.put(
-      Uri.parse('${_baseUrl}barang/$id'),
-      headers: <String, String>{
-        'Content-Type': 'application/json; charset=UTF-8',
-      },
-      body: jsonEncode(data),
-    );
-    return response.statusCode == 200;
-  }
+Future<bool> updateBarang(String id, Map<String, dynamic> data) async {
+  final response = await http.put(
+    Uri.parse('${_baseUrl}barang/$id'),
+    headers: {'Content-Type': 'application/json; charset=UTF-8'},
+    body: jsonEncode(data),
+  );
+  return response.statusCode == 200;
+}
 
-  Future<bool> deleteBarang(int id) async {
-    final response = await http.delete(Uri.parse('${_baseUrl}barang/$id'));
-    return response.statusCode == 200;
-  }
+Future<bool> deleteBarang(String id) async {
+  final response = await http.delete(Uri.parse('${_baseUrl}barang/$id'));
+  return response.statusCode == 200;
+}
 }

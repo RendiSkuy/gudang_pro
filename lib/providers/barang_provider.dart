@@ -48,19 +48,19 @@ class BarangProvider extends ChangeNotifier {
     return success;
   }
 
-  Future<bool> updateBarang(int id, Map<String, dynamic> data) async {
-    bool success = await _apiService.updateBarang(id, data);
-    if (success) {
-      fetchBarang();
-    }
-    return success;
+Future<bool> updateBarang(String id, Map<String, dynamic> data) async {
+  bool success = await _apiService.updateBarang(id, data);
+  if (success) {
+    fetchBarang();
   }
-  
-  Future<void> deleteBarang(int id) async {
-    await _apiService.deleteBarang(id);
-    _items.removeWhere((item) => item.id == id);
-    notifyListeners();
-  }
+  return success;
+}
+
+Future<void> deleteBarang(String id) async {
+  await _apiService.deleteBarang(id);
+  _items.removeWhere((item) => item.id == id);
+  notifyListeners();
+}
 
   // --- FUNGSI EXPORT YANG SUDAH DIPERBARUI ---
   Future<String?> exportToCsv() async {

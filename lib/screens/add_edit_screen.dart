@@ -27,10 +27,9 @@ class _AddEditScreenState extends State<AddEditScreen> {
     'ATK',
     'Perkakas',
     'Pakaian',
-    'Lainnya',
+    'Lainnya'
   ];
 
-  // Semua fungsi inti (initState, _selectDate, _submitForm, _deleteBarang) tidak berubah logikanya.
   @override
   void initState() {
     super.initState();
@@ -60,12 +59,9 @@ class _AddEditScreenState extends State<AddEditScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
-              primary:
-                  Theme.of(
-                    context,
-                  ).colorScheme.primary, // header background color
-              onPrimary: Colors.white, // header text color
-              onSurface: Colors.black, // body text color
+              primary: Theme.of(context).colorScheme.primary,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
             ),
           ),
           child: child!,
@@ -75,9 +71,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
     if (picked != null && picked != _tanggalMasuk) {
       setState(() {
         _tanggalMasuk = picked;
-        _tanggalController.text = DateFormat(
-          'yyyy-MM-dd',
-        ).format(_tanggalMasuk);
+        _tanggalController.text = DateFormat('yyyy-MM-dd').format(_tanggalMasuk);
       });
     }
   }
@@ -92,13 +86,14 @@ class _AddEditScreenState extends State<AddEditScreen> {
         'kategori': _kategori,
         'jumlah_stok': _jumlahStok,
         'satuan': _satuan,
-        'tanggal_masuk': _tanggalController.text,
+        'tanggal_masuk': _tanggalMasuk.toIso8601String(), // Kirim dalam format ISO
       };
 
       bool success;
       if (widget.barang == null) {
         success = await provider.addBarang(data);
       } else {
+        // Pastikan widget.barang!.id (yang sekarang String) dipassing
         success = await provider.updateBarang(widget.barang!.id, data);
       }
 
@@ -114,9 +109,7 @@ class _AddEditScreenState extends State<AddEditScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                'OPERASI GAGAL! Periksa koneksi atau data input Anda.',
-              ),
+              content: Text('OPERASI GAGAL! Periksa koneksi atau data input Anda.'),
               backgroundColor: Colors.red,
             ),
           );
@@ -128,13 +121,11 @@ class _AddEditScreenState extends State<AddEditScreen> {
   void _deleteBarang() async {
     if (widget.barang != null) {
       final provider = Provider.of<BarangProvider>(context, listen: false);
-      // Hapus data dari provider
+      // Pastikan widget.barang!.id (yang sekarang String) dipassing
       await provider.deleteBarang(widget.barang!.id);
 
       if (mounted) {
-        // Tutup halaman form
         Navigator.of(context).pop();
-        // Beri notifikasi
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Data berhasil dihapus!'),
@@ -156,35 +147,27 @@ class _AddEditScreenState extends State<AddEditScreen> {
             IconButton(
               icon: const Icon(Icons.delete_outline),
               onPressed: () {
-                // Fungsi hapus tidak berubah
                 showDialog(
                   context: context,
-                  builder:
-                      (ctx) => AlertDialog(
-                        title: const Text('Konfirmasi Hapus'),
-                        content: const Text(
-                          'Anda yakin ingin menghapus barang ini?',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(),
-                            child: const Text('Batal'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(ctx).pop();
-                              _deleteBarang();
-                            },
-                            child: const Text(
-                              'Hapus',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ],
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Konfirmasi Hapus'),
+                    content: const Text('Anda yakin ingin menghapus barang ini?'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: const Text('Batal')),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          _deleteBarang();
+                        },
+                        child: const Text('Hapus', style: TextStyle(color: Colors.red)),
                       ),
+                    ],
+                  ),
                 );
               },
-            ),
+            )
         ],
       ),
       body: SingleChildScrollView(
@@ -196,34 +179,24 @@ class _AddEditScreenState extends State<AddEditScreen> {
             children: [
               TextFormField(
                 initialValue: _namaBarang,
-                decoration: const InputDecoration(
-                  labelText: 'Nama Barang',
-                  prefixIcon: Icon(Icons.inventory_2),
-                ),
-                validator:
-                    (value) =>
-                        value!.trim().isEmpty
-                            ? 'Nama barang tidak boleh kosong'
-                            : null,
+                decoration: const InputDecoration(labelText: 'Nama Barang', prefixIcon: Icon(Icons.inventory_2)),
+                validator: (value) =>
+                    value!.trim().isEmpty ? 'Nama barang tidak boleh kosong' : null,
                 onSaved: (value) => _namaBarang = value!,
               ),
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(
-                value:
-                    _kategoriOptions.contains(_kategori)
-                        ? _kategori
-                        : _kategoriOptions.last,
+                value: _kategoriOptions.contains(_kategori) ? _kategori : _kategoriOptions.last,
                 decoration: const InputDecoration(
                   labelText: 'Kategori',
                   prefixIcon: Icon(Icons.category),
                 ),
-                items:
-                    _kategoriOptions.map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
-                    }).toList(),
+                items: _kategoriOptions.map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
                 onChanged: (newValue) {
                   setState(() {
                     _kategori = newValue!;
@@ -235,9 +208,8 @@ class _AddEditScreenState extends State<AddEditScreen> {
               TextFormField(
                 initialValue: _jumlahStok.toString(),
                 decoration: const InputDecoration(
-                  labelText: 'Jumlah Stok',
-                  prefixIcon: Icon(Icons.format_list_numbered),
-                ),
+                    labelText: 'Jumlah Stok',
+                    prefixIcon: Icon(Icons.format_list_numbered)),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value!.isEmpty) return 'Jumlah stok tidak boleh kosong';
@@ -251,14 +223,10 @@ class _AddEditScreenState extends State<AddEditScreen> {
               TextFormField(
                 initialValue: _satuan,
                 decoration: const InputDecoration(
-                  labelText: 'Satuan (e.g., pcs, kg, unit)',
-                  prefixIcon: Icon(Icons.ad_units),
-                ),
-                validator:
-                    (value) =>
-                        value!.trim().isEmpty
-                            ? 'Satuan tidak boleh kosong'
-                            : null,
+                    labelText: 'Satuan (e.g., pcs, kg, unit)',
+                    prefixIcon: Icon(Icons.ad_units)),
+                validator: (value) =>
+                    value!.trim().isEmpty ? 'Satuan tidak boleh kosong' : null,
                 onSaved: (value) => _satuan = value!,
               ),
               const SizedBox(height: 20),
@@ -272,7 +240,6 @@ class _AddEditScreenState extends State<AddEditScreen> {
                 onTap: () => _selectDate(context),
               ),
               const SizedBox(height: 32),
-              // Tombol Simpan akan otomatis menggunakan tema baru
               ElevatedButton(
                 onPressed: _submitForm,
                 child: const Text('Simpan Data'),

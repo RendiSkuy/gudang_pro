@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../providers/barang_provider.dart';
 import 'add_edit_screen.dart';
+import 'package:intl/intl.dart'; // <-- INI PERBAIKANNYA
 import '../models/barang_model.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,7 +17,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Memuat data saat halaman pertama kali dibuka
     Provider.of<BarangProvider>(context, listen: false).fetchBarang();
   }
 
@@ -31,81 +31,92 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        // --- INI BAGIAN KODE UNTUK LOGO & JUDUL ---
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              'assets/images/logo.png',
-              height: 32,
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            floating: true,
+            pinned: true,
+            title: Row(
+              children: [
+                Image.asset('assets/images/logo.png', height: 32),
+                const SizedBox(width: 12),
+                const Text('Gudang Pro'),
+              ],
             ),
-            const SizedBox(width: 12),
-            const Text('Gudang Pro'),
-          ],
-        ),
-        // -----------------------------------------
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.file_download_outlined),
-            tooltip: 'Export ke CSV',
-            onPressed: () async {
-              final provider =
-                  Provider.of<BarangProvider>(context, listen: false);
-              final result = await provider.exportToCsv();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(result ?? 'File CSV berhasil diexport.')),
-                );
-              }
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              onChanged: (value) {
-                Future.delayed(const Duration(milliseconds: 500), () {
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.file_download_outlined),
+                tooltip: 'Export ke CSV',
+                onPressed: () async {
+                  final provider =
+                      Provider.of<BarangProvider>(context, listen: false);
+                  final result = await provider.exportToCsv();
                   if (mounted) {
-                    Provider.of<BarangProvider>(context, listen: false)
-                        .fetchBarang(search: value);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content:
+                              Text(result ?? 'File CSV berhasil diexport.')),
+                    );
                   }
-                });
-              },
-              decoration: InputDecoration(
-                hintText: 'Cari nama atau kategori barang...',
-                prefixIcon: Icon(Icons.search, color: Colors.grey.shade600),
+                },
+              ),
+            ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(80.0), // <-- Ubah menjadi 80
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    16, 0, 16, 16), // Padding bawah disesuaikan
+                child: TextField(
+                  onChanged: (value) {
+                    Future.delayed(const Duration(milliseconds: 500), () {
+                      if (mounted) {
+                        Provider.of<BarangProvider>(context, listen: false)
+                            .fetchBarang(search: value);
+                      }
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Cari barang...',
+                    prefixIcon: Icon(Icons.search, color: Colors.white70),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.2),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    hintStyle: const TextStyle(color: Colors.white70),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                ),
               ),
             ),
           ),
-          Expanded(
-            child: Consumer<BarangProvider>(
-              builder: (context, provider, child) {
-                if (provider.isLoading && provider.items.isEmpty) {
-                  return _buildShimmerLoading();
-                }
-                if (provider.errorMessage != null) {
-                  return Center(child: Text('Error: ${provider.errorMessage}'));
-                }
-                if (provider.items.isEmpty) {
-                  return _buildEmptyState();
-                }
-                return RefreshIndicator(
-                  onRefresh: () => provider.fetchBarang(),
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 80.0),
-                    itemCount: provider.items.length,
-                    itemBuilder: (context, index) {
-                      final item = provider.items[index];
-                      return _buildBarangListItem(item, provider);
-                    },
-                  ),
-                );
-              },
-            ),
+          Consumer<BarangProvider>(
+            builder: (context, provider, child) {
+              if (provider.isLoading && provider.items.isEmpty) {
+                return SliverFillRemaining(
+                    hasScrollBody: false, child: _buildShimmerLoading());
+              }
+              if (provider.errorMessage != null) {
+                return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child:
+                        Center(child: Text('Error: ${provider.errorMessage}')));
+              }
+              if (provider.items.isEmpty) {
+                return SliverFillRemaining(
+                    hasScrollBody: false, child: _buildEmptyState());
+              }
+              return SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final item = provider.items[index];
+                    return _buildBarangListItem(item);
+                  },
+                  childCount: provider.items.length,
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -122,10 +133,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBarangListItem(Barang item, BarangProvider provider) {
+  Widget _buildBarangListItem(Barang item) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.0),
@@ -147,62 +157,67 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         },
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16.0),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _getIconForCategory(item.kategori),
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 30,
+                ),
               ),
-              child: Icon(
-                _getIconForCategory(item.kategori),
-                color: Theme.of(context).colorScheme.primary,
-                size: 30,
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.namaBarang,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.black87),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Masuk: ${DateFormat('dd MMM yyyy').format(item.tanggalMasuk)}', // <-- Penggunaan DateFormat
+                      style:
+                          TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(width: 16),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    item.namaBarang,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        color: Colors.black87),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    item.jumlahStok.toString(),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 22,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
-                  const SizedBox(height: 6),
                   Text(
-                    item.kategori,
+                    item.satuan,
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  item.jumlahStok.toString(),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 22,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                Text(
-                  item.satuan,
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                ),
-              ],
-            )
-          ],
+              )
+            ],
+          ),
         ),
       ),
     );
@@ -210,9 +225,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildShimmerLoading() {
     return Shimmer.fromColors(
-      baseColor: Colors.grey[200]!,
-      highlightColor: Colors.grey[50]!,
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
       child: ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: 6,
         itemBuilder: (context, index) => Container(
           margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -235,7 +251,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                        width: double.infinity, height: 16.0, color: Colors.white),
+                        width: double.infinity,
+                        height: 16.0,
+                        color: Colors.white),
                     const SizedBox(height: 8),
                     Container(width: 100.0, height: 12.0, color: Colors.white),
                   ],
