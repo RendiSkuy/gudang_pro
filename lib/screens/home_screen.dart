@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../providers/barang_provider.dart';
 import 'add_edit_screen.dart';
-import 'package:intl/intl.dart'; // <-- INI PERBAIKANNYA
+import 'package:intl/intl.dart'; // <-- PERBAIKAN DI SINI
 import '../models/barang_model.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -31,94 +31,87 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            floating: true,
-            pinned: true,
-            title: Row(
-              children: [
-                Image.asset('assets/images/logo.png', height: 32),
-                const SizedBox(width: 12),
-                const Text('Gudang Pro'),
-              ],
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.file_download_outlined),
-                tooltip: 'Export ke CSV',
-                onPressed: () async {
-                  final provider =
-                      Provider.of<BarangProvider>(context, listen: false);
-                  final result = await provider.exportToCsv();
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content:
-                              Text(result ?? 'File CSV berhasil diexport.')),
-                    );
-                  }
-                },
-              ),
-            ],
-            bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(80.0), // <-- Ubah menjadi 80
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    16, 0, 16, 16), // Padding bawah disesuaikan
-                child: TextField(
-                  onChanged: (value) {
-                    Future.delayed(const Duration(milliseconds: 500), () {
-                      if (mounted) {
-                        Provider.of<BarangProvider>(context, listen: false)
-                            .fetchBarang(search: value);
-                      }
-                    });
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Cari barang...',
-                    prefixIcon: Icon(Icons.search, color: Colors.white70),
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.2),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    hintStyle: const TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-            ),
-          ),
-          Consumer<BarangProvider>(
-            builder: (context, provider, child) {
-              if (provider.isLoading && provider.items.isEmpty) {
-                return SliverFillRemaining(
-                    hasScrollBody: false, child: _buildShimmerLoading());
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Image.asset('assets/images/logo.png', height: 32),
+            const SizedBox(width: 12),
+            const Text('Gudang Pro'),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.file_download_outlined),
+            tooltip: 'Export ke CSV',
+            onPressed: () async {
+              final provider =
+                  Provider.of<BarangProvider>(context, listen: false);
+              final result = await provider.exportToCsv();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text(result ?? 'File CSV berhasil diexport.')),
+                );
               }
-              if (provider.errorMessage != null) {
-                return SliverFillRemaining(
-                    hasScrollBody: false,
-                    child:
-                        Center(child: Text('Error: ${provider.errorMessage}')));
-              }
-              if (provider.items.isEmpty) {
-                return SliverFillRemaining(
-                    hasScrollBody: false, child: _buildEmptyState());
-              }
-              return SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final item = provider.items[index];
-                    return _buildBarangListItem(item);
-                  },
-                  childCount: provider.items.length,
-                ),
-              );
             },
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(70.0),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: TextField(
+              onChanged: (value) {
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (mounted) {
+                    Provider.of<BarangProvider>(context, listen: false)
+                        .fetchBarang(search: value);
+                  }
+                });
+              },
+              decoration: InputDecoration(
+                hintText: 'Cari barang...',
+                prefixIcon:
+                    Icon(Icons.search, color: Theme.of(context).primaryColor),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      body: Consumer<BarangProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoading && provider.items.isEmpty) {
+            return _buildShimmerLoading();
+          }
+          if (provider.errorMessage != null) {
+            return Center(child: Text('Error: ${provider.errorMessage}'));
+          }
+          if (provider.items.isEmpty) {
+            return _buildEmptyState();
+          }
+          return RefreshIndicator(
+            onRefresh: () => provider.fetchBarang(),
+            child: ListView.builder(
+              padding: const EdgeInsets.only(top: 8, bottom: 80.0),
+              itemCount: provider.items.length,
+              itemBuilder: (context, index) {
+                final item = provider.items[index];
+                return _buildBarangListItem(item);
+              },
+            ),
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
@@ -190,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Masuk: ${DateFormat('dd MMM yyyy').format(item.tanggalMasuk)}', // <-- Penggunaan DateFormat
+                      'Masuk: ${DateFormat('dd MMM yyyy').format(item.tanggalMasuk)}',
                       style:
                           TextStyle(color: Colors.grey.shade600, fontSize: 13),
                     ),
@@ -255,7 +248,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 16.0,
                         color: Colors.white),
                     const SizedBox(height: 8),
-                    Container(width: 100.0, height: 12.0, color: Colors.white),
+                    Container(
+                        width: 100.0, height: 12.0, color: Colors.white),
                   ],
                 ),
               ),
