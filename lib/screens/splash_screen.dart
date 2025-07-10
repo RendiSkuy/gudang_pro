@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'main_screen.dart'; // Halaman utama kita
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'main_screen.dart';
+import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -10,39 +12,38 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  final _storage = const FlutterSecureStorage();
+
   @override
   void initState() {
     super.initState();
-    // Jalankan fungsi navigasi setelah beberapa detik
-    Timer(const Duration(seconds: 3), () {
-      // Pindah ke halaman utama dan hapus splash screen dari tumpukan navigasi
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainScreen()),
-      );
-    });
+    _checkAuthStatus();
+  }
+
+  Future<void> _checkAuthStatus() async {
+    await Future.delayed(const Duration(seconds: 2));
+
+    String? token = await _storage.read(key: 'jwt_token');
+
+    if (mounted) {
+      if (token != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainScreen()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Gunakan warna tema utama sebagai latar belakang
       backgroundColor: Theme.of(context).colorScheme.primary,
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Tampilkan logo Anda
-            Image.asset(
-              'assets/images/logo.png',
-              width: 150, // Atur ukuran logo
-            ),
-            const SizedBox(height: 24),
-            // Indikator loading
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          ],
-        ),
+        child: Image.asset('assets/images/logo.png', width: 150),
       ),
     );
   }

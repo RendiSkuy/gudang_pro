@@ -4,6 +4,7 @@ import 'providers/barang_provider.dart';
 import 'screens/main_screen.dart'; // <-- Pastikan mengimpor main_screen.dart
 import 'screens/splash_screen.dart'; 
 
+
 void main() {
   runApp(const MyApp());
 }
