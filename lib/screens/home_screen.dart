@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../providers/barang_provider.dart';
 import 'add_edit_screen.dart';
-import 'package:intl/intl.dart'; // <-- PERBAIKAN DI SINI
+import 'package:intl/intl.dart';
 import '../models/barang_model.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -14,10 +14,19 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _currentSearchQuery = '';
+
   @override
   void initState() {
     super.initState();
     Provider.of<BarangProvider>(context, listen: false).fetchBarang();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   IconData _getIconForCategory(String category) {
@@ -26,6 +35,35 @@ class _HomeScreenState extends State<HomeScreen> {
     if (category.toLowerCase().contains('perkakas')) return Icons.construction;
     if (category.toLowerCase().contains('pakaian')) return Icons.checkroom;
     return Icons.inventory_2;
+  }
+
+  void _performSearch(String query) {
+    if (_currentSearchQuery != query) {
+      _currentSearchQuery = query;
+      final provider = Provider.of<BarangProvider>(context, listen: false);
+      
+      if (query.trim().isEmpty) {
+        // Jika pencarian kosong, clear search
+        provider.clearSearch();
+      } else {
+        // Gunakan immediate search untuk client-side filtering (lebih responsif)
+        provider.searchImmediate(query.trim());
+      }
+    }
+  }
+
+  void _performDelayedSearch(String query) {
+    // Untuk server-side search dengan delay
+    if (_currentSearchQuery != query) {
+      _currentSearchQuery = query;
+      final provider = Provider.of<BarangProvider>(context, listen: false);
+      
+      if (query.trim().isEmpty) {
+        provider.clearSearch();
+      } else {
+        provider.fetchBarang(search: query.trim());
+      }
+    }
   }
 
   @override
@@ -46,14 +84,75 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () async {
               final provider =
                   Provider.of<BarangProvider>(context, listen: false);
-              final result = await provider.exportToCsv();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text(result ?? 'File CSV berhasil diexport.')),
+              
+              // Dialog untuk memilih export semua atau hanya hasil filter
+              if (_currentSearchQuery.isNotEmpty) {
+                final result = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Export Data'),
+                    content: const Text('Pilih data yang ingin di-export:'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Semua Data'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Hasil Pencarian'),
+                      ),
+                    ],
+                  ),
                 );
+                
+                if (result != null) {
+                  final exportResult = await provider.exportToCsv(exportFiltered: result);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(exportResult ?? 'File CSV berhasil diexport.')),
+                    );
+                  }
+                }
+              } else {
+                final result = await provider.exportToCsv();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(result ?? 'File CSV berhasil diexport.')),
+                  );
+                }
               }
             },
+          ),
+          // Tombol untuk toggle filter mode (untuk debugging/testing)
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              final provider = Provider.of<BarangProvider>(context, listen: false);
+              switch (value) {
+                case 'toggle_filter':
+                  provider.toggleFilterMode();
+                  break;
+                case 'debug_state':
+                  provider.printCurrentState();
+                  break;
+                case 'force_refresh':
+                  await provider.forceRefreshFromServer();
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'toggle_filter',
+                child: Text('Toggle Filter Mode'),
+              ),
+              const PopupMenuItem(
+                value: 'debug_state',
+                child: Text('Debug State'),
+              ),
+              const PopupMenuItem(
+                value: 'force_refresh',
+                child: Text('Force Refresh'),
+              ),
+            ],
           ),
         ],
         bottom: PreferredSize(
@@ -61,18 +160,35 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: TextField(
+              controller: _searchController,
               onChanged: (value) {
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  if (mounted) {
-                    Provider.of<BarangProvider>(context, listen: false)
-                        .fetchBarang(search: value);
+                // Immediate search untuk client-side filtering
+                _performSearch(value);
+                
+                // Juga lakukan delayed search untuk server-side sebagai backup
+                Future.delayed(const Duration(milliseconds: 1000), () {
+                  if (mounted && _searchController.text == value) {
+                    _performDelayedSearch(value);
                   }
                 });
+              },
+              onSubmitted: (value) {
+                // Langsung search ketika user tekan enter
+                _performSearch(value);
               },
               decoration: InputDecoration(
                 hintText: 'Cari barang...',
                 prefixIcon:
                     Icon(Icons.search, color: Theme.of(context).primaryColor),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _performSearch('');
+                        },
+                      )
+                    : null,
                 filled: true,
                 fillColor: Colors.white,
                 contentPadding: const EdgeInsets.symmetric(vertical: 15),
@@ -84,6 +200,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                ),
               ),
             ),
           ),
@@ -91,17 +211,17 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Consumer<BarangProvider>(
         builder: (context, provider, child) {
-          if (provider.isLoading && provider.items.isEmpty) {
+          if (provider.isLoading) {
             return _buildShimmerLoading();
           }
           if (provider.errorMessage != null) {
-            return Center(child: Text('Error: ${provider.errorMessage}'));
+            return _buildErrorState(provider.errorMessage!, provider);
           }
           if (provider.items.isEmpty) {
             return _buildEmptyState();
           }
           return RefreshIndicator(
-            onRefresh: () => provider.fetchBarang(),
+            onRefresh: () => provider.refresh(),
             child: ListView.builder(
               padding: const EdgeInsets.only(top: 8, bottom: 80.0),
               itemCount: provider.items.length,
@@ -269,7 +389,9 @@ class _HomeScreenState extends State<HomeScreen> {
               size: 80, color: Colors.grey.shade400),
           const SizedBox(height: 20),
           Text(
-            'Inventaris Anda Kosong',
+            _currentSearchQuery.isEmpty 
+                ? 'Inventaris Anda Kosong'
+                : 'Tidak ada hasil untuk "${_currentSearchQuery}"',
             style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -277,8 +399,50 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            'Klik tombol + untuk menambah barang baru.',
+            _currentSearchQuery.isEmpty
+                ? 'Klik tombol + untuk menambah barang baru.'
+                : 'Coba kata kunci yang berbeda atau tambah barang baru.',
             style: TextStyle(fontSize: 16, color: Colors.grey.shade500),
+          ),
+          if (_currentSearchQuery.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                _searchController.clear();
+                _performSearch('');
+              },
+              child: const Text('Tampilkan Semua'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error, BarangProvider provider) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 80, color: Colors.red.shade400),
+          const SizedBox(height: 20),
+          Text(
+            'Terjadi Kesalahan',
+            style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            error,
+            style: TextStyle(fontSize: 16, color: Colors.grey.shade500),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () => provider.fetchBarang(),
+            child: const Text('Coba Lagi'),
           ),
         ],
       ),
