@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'providers/barang_provider.dart';
-import 'screens/main_screen.dart'; // <-- Pastikan mengimpor main_screen.dart
-import 'screens/splash_screen.dart'; 
-
+import 'package:gudang_pro/providers/auth_provider.dart';
+import 'package:gudang_pro/providers/barang_provider.dart';
+import 'package:gudang_pro/screens/splash_screen.dart';
+import 'package:provider/provider.dart'; // <-- PERBAIKAN DI SINI
 
 void main() {
   runApp(const MyApp());
@@ -14,22 +13,24 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Palet warna dan tema tetap sama
     const Color primaryColor = Color(0xFF00897B);
     const Color lightGrey = Color(0xFFF5F5F5);
 
-    return ChangeNotifierProvider(
-      create: (context) => BarangProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => BarangProvider()),
+      ],
       child: MaterialApp(
         title: 'Gudang Pro',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
+          useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
             seedColor: primaryColor,
             primary: primaryColor,
             background: lightGrey,
           ),
-          useMaterial3: true,
           scaffoldBackgroundColor: lightGrey,
           appBarTheme: const AppBarTheme(
             backgroundColor: primaryColor,
@@ -69,7 +70,6 @@ class MyApp extends StatelessWidget {
             floatingLabelStyle: const TextStyle(color: primaryColor),
           ),
         ),
-        // Perubahan utama ada di sini
         home: const SplashScreen(),
       ),
     );

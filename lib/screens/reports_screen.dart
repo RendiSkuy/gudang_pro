@@ -1,90 +1,88 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../providers/barang_provider.dart';
+import 'package:gudang_pro/api/api_service.dart'; // <-- PERBAIKAN DI SINI
+import 'package:intl/intl.dart';
 
-class ReportsScreen extends StatelessWidget {
+class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Mengambil data dari provider
-    final provider = context.watch<BarangProvider>();
-    final totalJenis = provider.items.length;
-    final totalStok = provider.items.fold(0, (sum, item) => sum + item.jumlahStok);
-    final stokKritis = provider.items.where((item) => item.jumlahStok < 10).toList();
+  State<ReportsScreen> createState() => _ReportsScreenState();
+}
 
+class _ReportsScreenState extends State<ReportsScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  final ApiService _apiService = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Laporan Inventaris'),
+        title: const Text('Laporan Transaksi'),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Barang Masuk'),
+            Tab(text: 'Barang Keluar'),
+          ],
+        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          // Baris untuk Kartu Ringkasan
-          Row(
-            children: [
-              Expanded(child: _buildSummaryCard('Total Jenis', totalJenis.toString(), Icons.inventory_2, Colors.blue)),
-              const SizedBox(width: 16),
-              Expanded(child: _buildSummaryCard('Total Stok', totalStok.toString(), Icons.stacked_bar_chart, Colors.orange)),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // Placeholder untuk Grafik
-          Text('Distribusi Kategori', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          Container(
-            height: 200,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]
-            ),
-            child: const Center(child: Text('Tempat untuk Pie Chart nanti')),
-          ),
-          const SizedBox(height: 24),
-          
-          // Daftar Stok Kritis
-          Text('Stok Kritis (${stokKritis.length} Barang)', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 12),
-          // Jika tidak ada stok kritis
-          if (stokKritis.isEmpty)
-            const Text('Tidak ada barang dengan stok kritis.'),
-          // Jika ada, tampilkan sebagai list
-          ...stokKritis.map((item) => Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Colors.red.shade100,
-                foregroundColor: Colors.red.shade800,
-                child: const Icon(Icons.warning_amber_rounded),
-              ),
-              title: Text(item.namaBarang),
-              trailing: Text('${item.jumlahStok} ${item.satuan}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
-          )),
+          _buildTransactionList('masuk'),
+          _buildTransactionList('keluar'),
         ],
       ),
     );
   }
 
-  // Helper widget untuk membuat kartu ringkasan
-  Widget _buildSummaryCard(String title, String value, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 32, color: color),
-          const SizedBox(height: 12),
-          Text(title, style: TextStyle(fontSize: 14, color: color)),
-          Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: color)),
-        ],
-      ),
+  Widget _buildTransactionList(String tipe) {
+    return FutureBuilder<List<dynamic>>(
+      key: PageStorageKey(tipe), 
+      future: _apiService.getTransactions(tipe),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('Tidak ada data transaksi.'));
+        }
+        final transactions = snapshot.data!;
+        return RefreshIndicator(
+          onRefresh: () async => setState((){}),
+          child: ListView.builder(
+            itemCount: transactions.length,
+            itemBuilder: (context, index) {
+              final trx = transactions[index];
+              final barang = trx['id_barang'];
+              final tanggal = DateFormat('d MMM yyyy, HH:mm').format(DateTime.parse(trx['tanggal']));
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: ListTile(
+                  title: Text(barang?['nama_barang'] ?? 'Barang Dihapus'),
+                  subtitle: Text('Jumlah: ${trx['jumlah']} | Tanggal: $tanggal'),
+                  trailing: Text('Stok Akhir: ${trx['stok_akhir']}'),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
